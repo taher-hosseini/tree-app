@@ -18,7 +18,6 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories }) => {
     const [expanded, setExpanded] = useState<{ [key: number]: boolean }>({});
     const [checked, setChecked] = useState<{ [key: number]: boolean }>({});
 
-    // تابع برای پیدا کردن اجداد یک نود
     const findAncestors = (id: number, categories: Category[], ancestors: number[] = []): number[] => {
         for (const category of categories) {
             if (category.children.some((child) => child.id === id)) {
@@ -35,12 +34,10 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories }) => {
         return ancestors;
     };
 
-    // منطق برای مدیریت انتخاب نود و اجداد و فرزندان
     const toggleCheckbox = (id: number, isChecked: boolean, category: Category) => {
         setChecked((prev) => {
             const newChecked = { ...prev, [id]: isChecked };
 
-            // بازگشتی برای به‌روزرسانی چک‌باکس‌های فرزندان
             const updateChildCheckboxes = (category: Category, isChecked: boolean) => {
                 category.children.forEach((child) => {
                     newChecked[child.id] = isChecked;
@@ -50,40 +47,27 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories }) => {
                 });
             };
 
-            // بازگشتی برای به‌روزرسانی چک‌باکس‌های والدین
-            const updateParentCheckboxes = (categories: Category[], childId: number) => {
-                const parent = findParent(categories, childId);
-                if (parent) {
-                    const allChildrenChecked = parent.children.every(
-                        (child) => newChecked[child.id]
-                    );
-                    newChecked[parent.id] = allChildrenChecked;
+            updateChildCheckboxes(category, isChecked);
 
-                    // بازگشتی بررسی والد بالاتر
-                    updateParentCheckboxes(categories, parent.id);
-                }
+            const updateParentCheckboxes = (id: number, categories: Category[]) => {
+                categories.forEach((cat) => {
+                    if (cat.children.some(child => child.id === id)) {
+                        const allChildrenChecked = cat.children.every(child => newChecked[child.id]);
+                        newChecked[cat.id] = allChildrenChecked;
+                        updateParentCheckboxes(cat.id, categories);
+                    }
+                    if (cat.children.length > 0) {
+                        updateParentCheckboxes(id, cat.children);
+                    }
+                });
             };
 
-            updateChildCheckboxes(category, isChecked); // فرزندان را به‌روزرسانی کن
-            updateParentCheckboxes(categories, id); // والدین و اجداد را به‌روزرسانی کن
+            updateParentCheckboxes(id, categories);
 
             return newChecked;
         });
     };
 
-// تابع کمکی برای پیدا کردن والد
-    const findParent = (categories: Category[], childId: number): Category | null => {
-        for (const category of categories) {
-            if (category.children.some((child) => child.id === childId)) {
-                return category;
-            }
-            const parent = findParent(category.children, childId);
-            if (parent) {
-                return parent;
-            }
-        }
-        return null;
-    };
 
 
     const renderCategories = (categories: Category[]) => {
@@ -109,7 +93,6 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories }) => {
                     <span>{category.title}</span>
                 </div>
 
-                {/* نمایش فرزندان اگر منو باز باشد */}
                 {expanded[category.id] && category.children.length > 0 && (
                     <div className="ml-6">{renderCategories(category.children)}</div>
                 )}
